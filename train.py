@@ -6,12 +6,14 @@ import torch.nn as nn
 import ResNet
 import argparse
 import os
-from torchsummary import summary
+import matplotlib.pyplot as plt
+from torch.nn.functional import nll_loss, log_softmax
+import numpy as np
 
 input_size = 224
 epoch = 30
 learning_rate = 0.01
-batch_szie = 128
+batch_szie = 32
 
 
 def load_data():
@@ -22,15 +24,18 @@ def load_data():
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize(input_size),
+            transforms.RandomCrop(input_size),
             transforms.RandomVerticalFlip(),
             transforms.RandomHorizontalFlip(),
-            # transforms.RandomResizedCrop(input_size, scale=(0.8, 1)),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'validate': transforms.Compose([
             transforms.Resize(input_size),
             transforms.CenterCrop(input_size),
-            transforms.ToTensor()]
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]
         )
     }
 
@@ -72,7 +77,7 @@ def train(optimizer, model, dataloaders, criterion, lr_scheduler, max_epoch=20):
             else:
                 model.eval()
 
-            epoch_loos = 0.0
+            epoch_loss = 0.0
             epoch_acc = 0.0
 
             # show progress
@@ -92,17 +97,21 @@ def train(optimizer, model, dataloaders, criterion, lr_scheduler, max_epoch=20):
                     optimizer.step()
 
                 # get loss and accuracy
-                epoch_loos += loss.item() * X.size(0)
-                epoch_acc += torch.sum(preds == Y.data)
+                epoch_loss += loss.item() * X.size(0)
+                correct_num = torch.sum(preds == Y.data)
+                epoch_acc += correct_num
 
-            epoch_loos /= len(dataloaders[phase].dataset)
+                if (step + 1) % 50 == 0:
+                    print('current {} Loss: {:.4f} Acc: {:.4f}'.format(phase, loss.item(), correct_num.double() / X.shape[0]))
+
+            epoch_loss /= len(dataloaders[phase].dataset)
             epoch_acc = epoch_acc.double() / len(dataloaders[phase].dataset)
 
             if phase == 'train':
                 acc_list.append(epoch_acc)
             else:
                 val_acc_list.append(epoch_acc)
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loos, epoch_acc))
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
             # save best model
             if phase == 'validate' and epoch_acc > best_acc:
                 best_model_weights = copy.deepcopy(model.state_dict())
@@ -142,12 +151,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='train', help='use (--mode train) if you want train model')
     parser.add_argument('--model', default='checkpoint/best.pth', help='choose your model path when you test')
     opt = parser.parse_args()
-
     model = ResNet.ResNet34()
-    summary(model, (3, 224, 224))
-    print(model.state_dict().keys())
-
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.00001)
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.3)
     criterion = nn.CrossEntropyLoss()
     data_loaders = load_data()

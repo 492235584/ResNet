@@ -1,12 +1,12 @@
 import torch.nn as nn
 
 
-def Conv2d_BN(in_channels, out_channels, kernel_size=3, stride=1, padding=0):
+def Conv2d_BN(in_channels, out_channels, kernel_size=3, stride=1, padding=0, bias=True):
     '''
     conv -> bn -> activate
     '''
     stack = nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+        nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=bias),
         nn.BatchNorm2d(out_channels),
         nn.ReLU()
     )
@@ -23,7 +23,7 @@ class ResNet(nn.Module):
         self.stem = nn.Sequential(
             # input: 3*224*224 output: 64*112*112
             # in_channels, out_channels, kernel_size, stride, padding
-            Conv2d_BN(3, 64, 7, stride=2, padding=3),
+            Conv2d_BN(3, 64, 7, stride=2, padding=3, bias=False),
             # input: 64*112*112 output: 64*56*56
             # kernel_size, stride, padding
             nn.MaxPool2d(3, stride=2, padding=1)
@@ -94,7 +94,10 @@ class BasicBlock(nn.Module):
         if downsample:
             # channel * 2, size / 2
             out_c = in_c * 2
-            self.downsample = Conv2d_BN(in_c, out_c, 3, stride=2, padding=1)
+            self.downsample = nn.Sequential(
+                nn.Conv2d(in_c, out_c, 3, stride=2, padding=1, bias=False),
+                nn.BatchNorm2d(out_c)
+            )
             self.conv1 = Conv2d_BN(in_c, out_c, 3, stride=2, padding=1)
         else:
             out_c = in_c
