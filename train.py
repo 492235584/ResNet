@@ -3,12 +3,10 @@ import torchvision as tv
 import torchvision.transforms as transforms
 from torch import optim
 import torch.nn as nn
-import model
+import ResNet
 import argparse
 import os
-import matplotlib.pyplot as plt
-from torch.nn.functional import nll_loss, log_softmax
-import numpy as np
+from torchsummary import summary
 
 input_size = 224
 epoch = 30
@@ -141,10 +139,14 @@ def inference(model, dataloaders):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', default='val', help='use (--mode train) if you want train model')
+    parser.add_argument('--mode', default='train', help='use (--mode train) if you want train model')
     parser.add_argument('--model', default='checkpoint/best.pth', help='choose your model path when you test')
     opt = parser.parse_args()
-    model = model.AlexNet()
+
+    model = ResNet.ResNet34()
+    summary(model, (3, 224, 224))
+    print(model.state_dict().keys())
+
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.00001)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.3)
     criterion = nn.CrossEntropyLoss()
