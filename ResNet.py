@@ -56,9 +56,9 @@ class BottleBlock(nn.Module):
         self.downsample = downsample
 
         bollte_c = out_c // 4
-        self.conv1 = Conv2d_BN(in_c, bollte_c, 1, stride=stride)
-        self.conv2 = Conv2d_BN(bollte_c, bollte_c, 3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(bollte_c, out_c, 1, stride=1)
+        self.conv1 = Conv2d_BN(in_c, bollte_c, 1, stride=stride, bias=False)
+        self.conv2 = Conv2d_BN(bollte_c, bollte_c, 3, stride=1, padding=1, bias=False)
+        self.conv3 = nn.Conv2d(bollte_c, out_c, 1, stride=1, bias=False)
         self.bn = nn.BatchNorm2d(out_c)
         self.relu = nn.ReLU()
 
@@ -73,6 +73,7 @@ class BottleBlock(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
+        x = self.bn(x)
 
         if self.downsample:
             residual = self.downsample(residual)

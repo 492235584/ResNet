@@ -10,8 +10,8 @@ from torchsummary import summary
 
 input_size = 224
 epoch = 30
-learning_rate = 0.01
-batch_szie = 128
+learning_rate = 0.005
+batch_szie = 16
 
 
 def load_data():
@@ -43,7 +43,7 @@ def load_data():
     test_dataset = tv.datasets.CIFAR10(
         root='./data/', train=False, download=True, transform=data_transforms['validate'])
     test_dataloader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_szie, shuffle=False,
+        test_dataset, batch_size=batch_szie, shuffle=False, num_workers=4
     )
     return {'train': train_dataloader, 'validate': test_dataloader}
 
@@ -52,9 +52,6 @@ def train(optimizer, model, dataloaders, criterion, lr_scheduler, max_epoch=20):
     '''
     train model
     '''
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-
     best_model_weights = None
     best_acc = 0.0
 
@@ -116,8 +113,6 @@ def train(optimizer, model, dataloaders, criterion, lr_scheduler, max_epoch=20):
     return model
 
 def inference(model, dataloaders):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
     epoch_acc = 0.0
     # show progress
     for step, (X, Y) in enumerate(dataloaders['validate']):
@@ -144,6 +139,8 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     model = ResNet.ResNet50()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
     summary(model, (3, 224, 224))
     print(model.state_dict().keys())
 
